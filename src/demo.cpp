@@ -75,7 +75,7 @@ struct ipheader
     struct in_addr iph_destip;       // Destination IP address
 };
 
-struct tcphdr
+struct tcpheader
 {
     unsigned short sport;    // 源端口
     unsigned short dport;    // 目标端口
@@ -147,6 +147,8 @@ struct SharedMemoryQueue {
     char buffer[];
 };
 
+SharedMemoryQueue* shm_queue;
+
 void init_shared_memory() {
     shm_fd = open(SHM_NAME, O_CREAT | O_RDWR, 0666);
     if (shm_fd == -1) {
@@ -199,15 +201,13 @@ void write_in_shared_memory(void *pkt_data, size_t pkt_len) {
     printf("\n%u ~ %u ~ pktlen: %u.\n", shm_queue->read_index, shm_queue->write_index, pkt_len);
 }
 
-SharedMemoryQueue* shm_queue;
-
 void raw_packet_to_string(unsigned char *packet, unsigned char *header, unsigned char *payload, bool remove_ip = true, bool keep_payload = true) {
 	ipheader *ip = (ipheader *)(packet + sizeof(ethheader));
 	if (remove_ip) {
 		ip->iph_sourceip.s_addr = ip->iph_destip.s_addr = 0;
 	}
 	header = (unsigned char *)ip;
-	tcphdr *tcp = (tcphdr *)(ip + ip->iph_ihl * 4);
+	tcpheader *tcp = (tcpheader *)(ip + ip->iph_ihl * 4);
 	payload = (unsigned char *)tcp + tcp->len / 16 * 4;
 }
 
@@ -249,12 +249,12 @@ void handler(unsigned char *argument,const struct pcap_pkthdr *packet_header,con
 		t.dst = ip->iph_destip.s_addr;
 		t.proto = ip->iph_protocol;
 		int payload_length;
-		struct tcphdr *tcp;
+		struct tcpheader *tcp;
 		struct udphdr *udp;
 		switch (ip->iph_protocol) {
 			case IPPROTO_TCP:
 				printf("Protocol: TCP\n");
-				tcp = (struct tcphdr *) (packet_content + sizeof(ethheader) + ip->iph_ihl * 4 + sizeof(u_char) * 2);
+				tcp = (struct tcpheader *) (packet_content + sizeof(ethheader) + ip->iph_ihl * 4 + sizeof(u_char) * 2);
 				printf("From: %d\n", ntohs(tcp->sport));
 				printf("To: %d\n", ntohs(tcp->dport));
 				printf("len: %d\n", tcp->len / 16);
