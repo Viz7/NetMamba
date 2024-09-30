@@ -201,14 +201,15 @@ void write_in_shared_memory(void *pkt_data, size_t pkt_len) {
     printf("\n%u ~ %u ~ pktlen: %u.\n", shm_queue->read_index, shm_queue->write_index, pkt_len);
 }
 
-void raw_packet_to_string(unsigned char *packet, unsigned char *header, unsigned char *payload, bool remove_ip = true, bool keep_payload = true) {
-	ipheader *ip = (ipheader *)(packet + sizeof(ethheader));
+int raw_packet_to_string(unsigned char *packet, unsigned char *&header, unsigned char *&payload, bool remove_ip = true, bool keep_payload = true) {
+	ipheader *ip = (ipheader *)packet;
 	if (remove_ip) {
 		ip->iph_sourceip.s_addr = ip->iph_destip.s_addr = 0;
 	}
 	header = (unsigned char *)ip;
-	tcpheader *tcp = (tcpheader *)(ip + ip->iph_ihl * 4);
+	tcpheader *tcp = (tcpheader *)(packet + ip->iph_ihl * 4);
 	payload = (unsigned char *)tcp + tcp->len / 16 * 4;
+	return ip->iph_ihl * 4 + tcp->len / 16 * 4;
 }
 
 unsigned char *read_5hp_list(unsigned char * packets[], bool remove_ip = true, bool keep_payload = true) {
@@ -218,8 +219,8 @@ unsigned char *read_5hp_list(unsigned char * packets[], bool remove_ip = true, b
 	memset(res, 0, sizeof (res));
 	for (int i = 0; i < flow_packet_num; ++i) {
 		unsigned char *header, *payload;
-		raw_packet_to_string(packets[i], header, payload, remove_ip, keep_payload);
-		for (int p = 0; p < 80; ++p) res[i * 320 + p] = header[p];
+		int header_len = raw_packet_to_string(packets[i], header, payload, remove_ip, keep_payload);
+		for (int p = 0; p < min(80, header_len); ++p) res[i * 320 + p] = header[p];
 		for (int p = 0; p < 240; ++p) res[i * 320 + 80 + p] = payload[p];
 	}
 	return res;
