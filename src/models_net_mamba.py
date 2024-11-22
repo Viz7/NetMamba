@@ -93,9 +93,9 @@ class NetMamba(nn.Module):
                 embed_dim,
                 ssm_cfg=None,
                 norm_epsilon=1e-5,
-                rms_norm=True,
+                rms_norm=False,
                 residual_in_fp32=True,
-                fused_add_norm=True,
+                fused_add_norm=False,
                 layer_idx=i,
                 if_bimamba=False,
                 bimamba_type=bimamba_type,
@@ -119,9 +119,9 @@ class NetMamba(nn.Module):
                     decoder_embed_dim,
                     ssm_cfg=None,
                     norm_epsilon=1e-5,
-                    rms_norm=True,
+                    rms_norm=False,
                     residual_in_fp32=True,
-                    fused_add_norm=True,
+                    fused_add_norm=False,
                     layer_idx=i,
                     if_bimamba=False,
                     bimamba_type=bimamba_type,
@@ -220,16 +220,16 @@ class NetMamba(nn.Module):
         hidden_states = x
         for blk in self.blocks:
             hidden_states, residual = blk(hidden_states, residual)
-        fused_add_norm_fn = rms_norm_fn
-        x = fused_add_norm_fn(
-            self.drop_path(hidden_states),
-            self.norm_f.weight,
-            self.norm_f.bias,
-            eps=self.norm_f.eps,
-            residual=residual,
-            prenorm=False,
-            residual_in_fp32=True,
-        )
+        # fused_add_norm_fn = rms_norm_fn
+        # x = fused_add_norm_fn(
+        #     self.drop_path(hidden_states),
+        #     self.norm_f.weight,
+        #     self.norm_f.bias,
+        #     eps=self.norm_f.eps,
+        #     residual=residual,
+        #     prenorm=False,
+        #     residual_in_fp32=True,
+        # )
         if if_mask:
             return x, mask, ids_restore
         else:
@@ -254,16 +254,16 @@ class NetMamba(nn.Module):
         hidden_states = x
         for blk in self.decoder_blocks:
             hidden_states, residual = blk(hidden_states, residual)
-        fused_add_norm_fn = rms_norm_fn
-        x = fused_add_norm_fn(
-            self.drop_path(hidden_states),
-            self.decoder_norm_f.weight,
-            self.decoder_norm_f.bias,
-            eps=self.decoder_norm_f.eps,
-            residual=residual,
-            prenorm=False,
-            residual_in_fp32=True,
-        )
+        # fused_add_norm_fn = rms_norm_fn
+        # x = fused_add_norm_fn(
+        #     self.drop_path(hidden_states),
+        #     self.decoder_norm_f.weight,
+        #     self.decoder_norm_f.bias,
+        #     eps=self.decoder_norm_f.eps,
+        #     residual=residual,
+        #     prenorm=False,
+        #     residual_in_fp32=True,
+        # )
 
         # predictor projection
         x = self.decoder_pred(x)

@@ -4,7 +4,7 @@ from functools import partial
 from torch import Tensor
 from typing import Optional
 
-from mamba_ssm.modules.mamba_simple import Mamba
+from model import ResidualBlock, ModelArgs
 from timm.models.layers import DropPath
 try:
     from mamba_ssm.ops.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
@@ -42,7 +42,8 @@ class Block(nn.Module):
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
         self.fused_add_norm = fused_add_norm
-        self.mixer = mixer_cls(dim)
+        args = ModelArgs(d_model = dim, n_layer = 1, vocab_size = 0)
+        self.mixer = mixer_cls(args)
         self.norm = norm_cls(dim)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         if self.fused_add_norm:
@@ -119,13 +120,13 @@ def create_block(
     if ssm_cfg is None:
         ssm_cfg = {}
     factory_kwargs = {"device": device, "dtype": dtype}
-    mixer_cls = partial(Mamba, layer_idx=layer_idx, bimamba_type=bimamba_type, if_devide_out=if_devide_out, init_layer_scale=init_layer_scale, **ssm_cfg, **factory_kwargs)
+    # mixer_cls = partial(Mamba, layer_idx=layer_idx, bimamba_type=bimamba_type, if_devide_out=if_devide_out, init_layer_scale=init_layer_scale, **ssm_cfg, **factory_kwargs)
     norm_cls = partial(
         nn.LayerNorm if not rms_norm else RMSNorm, eps=norm_epsilon, **factory_kwargs
     )
     block = Block(
         d_model,
-        mixer_cls,
+        ResidualBlock,
         norm_cls=norm_cls,
         drop_path=drop_path,
         fused_add_norm=fused_add_norm,
